@@ -1,0 +1,76 @@
+local socket = require("socket")
+
+-- Lista para armazenar os clientes conectados
+local clients = {-- Script para matar todos os jogadores no Roblox
+
+-- Função para eliminar um jogador
+local function eliminarJogador(jogador)
+    -- Certifica-se de que o jogador tem um modelo de personagem
+    if jogador.Character and jogador.Character:FindFirstChild("Humanoid") then
+        jogador.Character.Humanoid.Health = 0
+    end
+end
+
+-- Itera sobre todos os jogadores no jogo
+for _, jogador in ipairs(game:GetService("Players"):GetPlayers()) do
+    eliminarJogador(jogador)
+end
+}
+
+-- Função para lidar com clientes
+local function handleClient(client)
+    while true do
+        local message, err = client:receive()
+        if err then
+            print("Erro ao receber mensagem:", err)
+            break
+        end
+        print("Mensagem recebida:", message)
+        broadcast(message, client)
+    end
+    client:close()
+end
+
+-- Função para enviar mensagens a todos os clientes conectados
+local function broadcast(message, sender)
+    for _, client in ipairs(clients) do
+        if client ~= sender then
+            local success, err = client:send(message .. "\n")
+            if not success then
+                print("Erro ao enviar mensagem:", err)
+            end
+        end
+    end
+end
+
+-- Configuração do servidor
+local function server()
+    local server = socket.bind("*", 9999)
+    server:settimeout(0)
+    print("Servidor iniciado. Aguardando conexões...")
+
+    while true do
+        local client = server:accept()
+        if client then
+            client:settimeout(0)
+            print("Novo cliente conectado.")
+            table.insert(clients, client)
+            -- Criar uma nova thread para lidar com o cliente
+            local clientThread = coroutine.create(function() handleClient(client) end)
+            coroutine.resume(clientThread)
+        end
+
+        -- Remover clientes desconectados
+        for i = #clients, 1, -1 do
+            local client = clients[i]
+            local status, err = client:send("ping\n")
+            if err then
+                print("Cliente desconectado:", err)
+                table.remove(clients, i)
+            end
+        end
+    end
+end
+
+-- Iniciar o servidor
+server(the survival game)
